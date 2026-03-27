@@ -1,0 +1,9 @@
+customtkinter
+PyPDF2
+pdfplumber
+pdf2image
+pytesseract
+pandas
+openpyxl
+Pillow
+pyinstaller

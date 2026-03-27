@@ -1,0 +1,53 @@
+{
+    "doc_types": {
+        "NQ": "Nghị quyết",
+        "QD": "Quyết định",
+        "QĐ": "Quyết định",
+        "CT": "Chỉ thị",
+        "TT": "Thông tư",
+        "BC": "Báo cáo",
+        "KH": "Kế hoạch",
+        "TB": "Thông báo",
+        "TTr": "Tờ trình",
+        "HD": "Hướng dẫn",
+        "QÐ": "Quyết định",
+        "CS": "Chính sách",
+        "DA": "Dự án",
+        "PA": "Phương án",
+        "KL": "Kết luận",
+        "CD": "Công điện",
+        "CĐ": "Công điện",
+        "GM": "Giấy mời"
+    },
+    "issuers": {
+        "CP": "CHÍNH PHỦ",
+        "KTNN": "KIỂM TOÁN NHÀ NƯỚC",
+        "HĐTP": "HỘI ĐỒNG THẨM PHÁN TÒA ÁN NHÂN DÂN TỐI CAO",
+        "ĐUK": "ĐẢNG ỦY KHỐI CÁC CƠ QUAN VÀ DOANH NGHIỆP TỈNH",
+        "BNV": "BỘ NỘI VỤ",
+        "BTC": "BỘ TÀI CHÍNH",
+        "TANDTC": "TÒA ÁN NHÂN DÂN TỐI CAO",
+        "VKSNDTC": "VIỆN KIỂM SÁT NHÂN DÂN TỐI CAO",
+        "QH": "QUỐC HỘI",
+        "UBTVQH": "ỦY BAN THƯỜNG VỤ QUỐC HỘI",
+        "TW": "BAN CHẤP HÀNH TRUNG ƯƠNG",
+        "BCT": "BỘ CHÍNH TRỊ",
+        "BBT": "BAN BÍ THƯ",
+        "UBND": "ỦY BAN NHÂN DÂN",
+        "HĐND": "HỘI ĐỒNG NHÂN DÂN"
+    },
+    "ocr_corrections": {
+        "Sô": "Số",
+        "sô": "số",
+        "SÔ": "SỐ",
+        "ngảy": "ngày",
+        "ngay": "ngày",
+        "thảng": "tháng",
+        "thang": "tháng",
+        "nảm": "năm",
+        "nam": "năm",
+        "Hả Nội": "Hà Nội",
+        "Quvết định": "Quyết định",
+        "Nghị quvết": "Nghị quyết"
+    }
+}

@@ -1,0 +1,239 @@
+"""
+FULL SPECIFICATION FOR EXTRACTING FIELDS FROM VIETNAMESE ADMINISTRATIVE DOCUMENTS
+(ROBUST – OCR-RESISTANT – MULTILINE – HEURISTIC – LAYOUT-AWARE)
+
+GOAL:
+Create a Python-based extraction module that converts OCR text of Vietnamese administrative 
+documents (văn bản hành chính) into structured fields.
+
+OUTPUT FIELDS:
+{
+  "co_quan_ban_hanh": ...,
+  "so_van_ban": ...,
+  "ky_hieu": ...,
+  "ngay_ky": ...,
+  "loai_van_ban": ...,
+  "trich_yeu": ...,
+  "nguoi_ky": ...
+}
+
+====================================================================
+GLOBAL NORMALIZATION RULES
+====================================================================
+Maintain two versions of the OCR data:
+1) lines[] – original line-by-line
+2) cleaned_text – normalized version
+
+Normalization steps:
+- Collapse multiple spaces → one space
+- Unify dashes: "-", "–", "—" → "-"
+- Fix common OCR errors: So→Số, Ngay→Ngày, thang→tháng, ve viec→về việc
+- Trim trailing and leading spaces per line
+- Preserve line breaks for multiline detection
+
+====================================================================
+EXCLUSION RULE (QUỐC HIỆU – TIÊU NGỮ)
+====================================================================
+When searching for:
+- loại văn bản (document type)
+- trích yếu
+- cơ quan ban hành
+- ngày ký
+
+ALWAYS IGNORE lines that match or resemble:
+
+QUỐC HIỆU:
+  "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"
+TIÊU NGỮ:
+  "Độc lập - Tự do - Hạnh phúc"
+
+Additional variants (OCR errors allowed):
+  "Cong hoa xa hoi chu nghia Viet Nam"
+  "Doc lap – Tu do – Hanh phuc"
+  "Độc lập – Tự do – Hạnh phúc"
+  "Độc lập - Tự do - Hạnh phúc"
+
+Do NOT treat these lines as:
+- document type
+- summary
+- agency
+- signature
+- date
+
+====================================================================
+1. CƠ QUAN BAN HÀNH (ISSUING AGENCY)
+====================================================================
+CHARACTERISTICS:
+- Located top-left
+- Appears BEFORE the line starting with "Số:"
+- May contain 1–3 lines
+- Mostly uppercase or title-case
+- MUST EXCLUDE quốc hiệu & tiêu ngữ
+- Typical keywords:
+    ["ỦY BAN", "UBND", "ĐẢNG ỦY", "ĐẢNG BỘ", "BỘ", "SỞ", "PHÒNG", "VĂN PHÒNG"]
+
+RULE:
+- From the top, collect consecutive uppercase-ish lines  
+  UNTIL reaching a line starting with “Số”
+- Stop if encountering quốc hiệu/tiêu ngữ (must ignore these)
+
+====================================================================
+2. SỐ VĂN BẢN + KÝ HIỆU
+====================================================================
+PATTERNS:
+- "Số: 11-NQ/ĐU"
+- "Số 12/QĐ-UBND"
+- "So: 01CV/TU" (OCR)
+
+EXTRACTION:
+- Detect "Số" or OCR variants: r"(Số|So)[: ]+"
+- so_van_ban = numeric part BEFORE first slash/dash  
+- ky_hieu = remainder AFTER the number
+
+FALLBACK:
+- If OCR merged: “11NQ/ĐU” → detect first number + symbol sequence
+
+====================================================================
+3. NGÀY KÝ (SIGNING DATE)
+====================================================================
+IMPORTANT:  
+→ **Ngày ký KHÔNG BAO GIỜ in đậm**  
+→ không phải tiêu đề, không phải dòng trọng tâm  
+→ nằm bên **phải trang**, phía trên thân văn bản
+
+DO NOT CONFUSE with quốc hiệu or tiêu ngữ.
+
+VALID PATTERNS (OCR FLEXIBLE):
+- "ngày 12 tháng 01 năm 2009"
+- "ngày 5 tháng 6 năm 2019"
+- "Ngày 12/01/2020"
+- "Ngày 12-01-2020"
+- Accentless:
+    "ngay 12 thang 1 nam 2020"
+
+OCR-RESISTANT REGEX:
+- r"(ngày|ngay)\s*\d{1,2}\s*(tháng|thang)\s*\d{1,2}\s*(năm|nam)\s*\d{4}"
+- r"(ngày|ngay)\s*\d{1,2}[/-]\d{1,2}[/-]\d{4}"
+
+LOCATION PRIORITY:
+1) Upper-right quadrant of the document  
+2) Not bold, not uppercase-heavy  
+3) Within the first 10–12 lines (after excluding quốc hiệu & tiêu ngữ)
+
+====================================================================
+4. LOẠI VĂN BẢN (DOCUMENT TYPE)
+====================================================================
+NOT the issuing agency. NOT quốc hiệu.
+
+CHARACTERISTICS:
+- Centered
+- Uppercase (often fully uppercase)
+- Single line
+- Examples:
+    “NGHỊ QUYẾT”
+    “QUYẾT ĐỊNH”
+    “TỜ TRÌNH”
+    “THÔNG BÁO”
+    “CÔNG VĂN”
+    “KẾT LUẬN”
+
+DETECTION:
+- First uppercase block line that is NOT quốc hiệu/tiêu ngữ and NOT in the left-aligned agency block
+- Match:
+    r"^[A-ZÀ-Ỵ\s]{5,}$"
+
+Priority:
+- uppercase  
+- centered alignment  
+- not adjacent to quốc hiệu  
+
+====================================================================
+5. TRÍCH YẾU (SUMMARY)
+====================================================================
+TRÍCH YẾU =  
+**(Loại văn bản) + (dòng mô tả ngay bên dưới)**
+
+Dòng mô tả thường bắt đầu bằng:
+- “Về việc …”
+- “Về …”
+- “<Loại văn bản> về …”
+- “V/v …”
+
+EXAMPLES:
+- “Quyết định về việc điều động cán bộ”
+- “Tờ trình về việc đề nghị phê duyệt …”
+- “Thông báo về …”
+- “Công văn về việc …”
+- “Nghị quyết về nhiệm vụ …”
+
+RULES:
+1. Locate loại văn bản line.
+2. The next 1–3 lines → check:
+       - starts with “Về”
+       - starts with “Về việc”
+       - starts with “V/v”
+       - starts with “[DocumentType] về”
+3. If OCR breaks the summary, merge lines until:
+       - empty line  
+       - line becomes normal paragraph text (lowercase-dominant)  
+4. Exclude quốc hiệu & tiêu ngữ if they appear in between.
+
+REGEX:
+- r"(Quyết định|Tờ trình|Công văn|Thông báo|Kết luận|Nghị quyết)\\s+về[^\\n]+"
+- r"V/?v\\s*[^\\n]+"
+- r"Về việc[^\\n]+"
+- r"Về[^\\n]+"
+
+====================================================================
+6. NGƯỜI KÝ (SIGNER)
+====================================================================
+CHARACTERISTICS:
+- Last 10–12 lines
+- Right-aligned region
+- Preceded by titles:
+    ["KT.", "TL.", "BÍ THƯ", "CHỦ TỊCH", "GIÁM ĐỐC", "PHÓ GIÁM ĐỐC", "TRƯỞNG PHÒNG"]
+- Name is in uppercase:
+    r"[A-ZÀ-Ỵ][A-ZÀ-Ỵ\s]{3,}"
+
+RULE:
+- Extract LAST uppercase name  
+- Not quốc hiệu  
+- Not loại văn bản  
+- Not cơ quan ban hành  
+
+====================================================================
+7. MULTILINE RULES
+====================================================================
+Some fields span multiple lines:
+- cơ quan ban hành
+- trích yếu
+- người ký
+
+Use line-by-line merging with heuristics.
+
+====================================================================
+COPILOT IMPLEMENTATION REQUIREMENTS
+====================================================================
+Copilot should generate:
+
+MAIN FUNCTION:
+    extract_vn_fields(text: str) -> dict
+
+HELPERS:
+    normalize_text()
+    extract_agency()
+    extract_number_and_symbol()
+    extract_date()
+    extract_document_type()
+    extract_summary()
+    extract_signer()
+    detect_uppercase_block()
+    is_quoc_hieu_or_tieu_ngu(line)
+
+All logic must honor exclusions for quốc hiệu & tiêu ngữ and 
+respect location/formatting rules.
+
+====================================================================
+END OF FULL SPEC
+====================================================================
+"""

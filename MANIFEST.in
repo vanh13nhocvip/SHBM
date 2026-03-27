@@ -1,0 +1,5 @@
+include README.md
+include requirements.txt
+include Run.bat
+recursive-include examples *
+recursive-include src *
