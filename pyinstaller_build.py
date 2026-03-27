@@ -17,7 +17,7 @@ def main():
     # Build command parts
     params = [
         "pyinstaller",
-        "--name=SHBM",
+        "--name=SHBM_Portable",
         "--onefile",
         "--windowed",
         "--clean",
@@ -28,21 +28,27 @@ def main():
     # Format: --add-data "source;destination" (Windows uses ;)
     datas = [
         (os.path.join("src", "resources"), os.path.join("src", "resources")),
+        (os.path.join("src", "tools", "deps"), os.path.join("src", "tools", "deps")),
         (os.path.join(ctk_path, "gui"), os.path.join("customtkinter", "gui")),
         (os.path.join(ctk_path, "assets"), os.path.join("customtkinter", "assets")),
     ]
 
-    for src, dst in datas:
-        if os.path.exists(src):
-            params.append(f'--add-data={src}{os.pathsep}{dst}')
-            print(f"Added data: {src} -> {dst}")
-        else:
-            print(f"Warning: Source path not found: {src}")
+    # Add extra hidden imports if needed
+    params.extend([
+        "--hidden-import=PIL._tkinter_finder",
+        "--hidden-import=customtkinter",
+        "--hidden-import=PyPDF2",
+        "--hidden-import=pdfplumber",
+        "--hidden-import=pdf2image",
+        "--hidden-import=pytesseract",
+        "--hidden-import=pandas",
+        "--hidden-import=openpyxl",
+    ])
 
     # Main entry point
     params.append(os.path.join("src", "__main__.py"))
 
-    print("Running PyInstaller command...")
+    print("Running PyInstaller command for Portable version...")
     print(" ".join(params))
     
     result = subprocess.run(params, capture_output=True, text=True)
@@ -56,14 +62,14 @@ def main():
 
     # Copy to H:\
     target_h = r'H:\SHBM_Installer'
-    source_exe = os.path.join("dist", "SHBM.exe")
+    source_exe = os.path.join("dist", "SHBM_Portable.exe")
     
     if os.path.exists(source_exe):
         try:
             if not os.path.exists(target_h):
                 os.makedirs(target_h)
-            shutil.copy2(source_exe, os.path.join(target_h, "SHBM.exe"))
-            print(f"Copied successfully to {target_h}\SHBM.exe")
+            shutil.copy2(source_exe, os.path.join(target_h, "SHBM_Portable.exe"))
+            print(f"Copied successfully to {target_h}\SHBM_Portable.exe")
         except Exception as e:
             print(f"Error copying to H:\: {e}")
     else:

@@ -357,12 +357,15 @@ def _extract_agency(lines: List[str], doc_type: str = "", bold_lines: Optional[s
             continue
             
         # Optional: Split if line contains both Agency and Motto (common in tight headers)
-        # Search for separators like multiple spaces or long dashes
-        parts = re.split(r"\s{3,}|[—–-]{2,}", s)
+        # Search for separators like multiple spaces, long dashes, or specific motto starts
+        parts = re.split(r"\s{2,}|[—–-]{2,}", s)
         if len(parts) > 1:
-            # If the second part looks like motto, just use the first part
-            if _is_quoc_hieu_or_tieu_ngu(parts[1]):
-                s = parts[0].strip()
+            # If any part looks like motto, just use the first part that looks like agency
+            for p_idx, part in enumerate(parts):
+                if _is_quoc_hieu_or_tieu_ngu(part):
+                    if p_idx > 0:
+                        s = " ".join(parts[:p_idx]).strip()
+                    break
         
         # We only consider lines that are Bold, Heading, or mostly Uppercase
         if is_bold or is_heading or is_upper or current_block == "BLOCK: HEADER_LEFT":
@@ -513,11 +516,10 @@ def _extract_number_and_symbol(lines: List[str]) -> tuple[str, str]:
     # Also stop at National Motto if it appears on same line (e.g. "Số: ... CỘNG HÒA...")
     # Add more locations like TP, Tỉnh, Huyện, and Party Preamble
     stop_patterns = r"(?=\s+(Hà\s+Nội|Tp\.|T\.p|Thành\s+phố|Tỉnh|Huyện|ngày|tháng|năm|[A-Z][a-zà-ỹ]+,|C\s*Ộ\s*N\s*G\s+H\s*Ò\s*A|Đ\s*Ả\s*N\s*G\s+C\s*Ộ\s*N\s*G\s+S\s*Ả\s*N|Đ\s*Ộ\s*C\s+L\s*Ậ\s*P))"
-    
-    # regex for "Số: 123/ABC Hà Nội..."
-    pattern = r"[Ss](?:ố|Ố)\s*:?\s*(\d{1,5})([^\n]*?)" + stop_patterns
+    # Extended stopper to be more robust against OCR noise
+    pattern = r"[Ss](?:ố|Ố|Ô|6|0|8)\s*:?\s*(\d{1,10})([^\n]*?)" + stop_patterns
     # Try the stopper regex first
-    m = re.search(pattern, so_line)
+    m = re.search(pattern, so_line, flags=re.IGNORECASE)
     
     # If no stopper match, try matching until end of line but exclude common noise
     if not m:
@@ -606,9 +608,11 @@ def _extract_date_v3(lines: List[str]) -> str:
         # Standard & Fuzzy Tones: ngày/ngay/ngảy... thảng/tháng... năm/nam...
         re.compile(r"(ng\S*y)\s*(\d{1,2})\s*(th\S*ng)\s*(\d{1,2})\s*(n\S*m)\s*(\d{4})", flags=re.IGNORECASE),
         re.compile(r"(ng\S*y)\s*(\d{1,2})[/-](\d{1,2})[/-](\d{4})", flags=re.IGNORECASE),
-        re.compile(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", flags=re.IGNORECASE),
+        re.compile(r"(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})", flags=re.IGNORECASE),
         # Dot separator: 12.03.2026
         re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", flags=re.IGNORECASE),
+        # Hyphen separator: 12-03-2026
+        re.compile(r"(\d{1,2})-(\d{1,2})-(\d{4})", flags=re.IGNORECASE),
         # Wide/Spaced OCR patterns: "n ăm", "th áng"
         re.compile(r"(n\s*g\s*[\wà-ỹ]+\s*y)\s*(\d{1,2})\s*(t\s*h\s*[\wà-ỹ]+\s*n\s*g)\s*(\d{1,2})\s*(n\s*[\wà-ỹ]+\s*m)\s*(\d{4})", flags=re.IGNORECASE),
     ]
@@ -1311,8 +1315,9 @@ def _extract_signer(lines: List[str]) -> str:
         r"^(TM\.|TL\.|KT\.|B[IÍ]\s+TH[ƯU]|PHÓ|PHO"
         r"|CHỦ\s+TỊCH|CHU\s+TICH|TRƯỞNG|TRUONG"
         r"|GIÁM\s+ĐỐC|GIAM\s+DOC|HIỆU\s+TRƯỞNG|HIEU\s+TRUONG"
-        r"|CỤC\s+TRƯỞNG|CHI\s+CỤC\s+TRƯỞNG"
-        r"|THỦ\s+TRƯỞNG|THU\s+TRUONG|VIỆN\s+TRƯỞNG|VIEN\s+TRUONG)"
+        r"|CỤC\s+TRƯỞNG|CHI\s+CỤC\s+TRƯỞNG|CHI\s+CUC\s+TRUONG"
+        r"|THỦ\s+TRƯỞNG|THU\s+TRUONG|VIỆN\s+TRƯỞNG|VIEN\s+TRUONG"
+        r"|P\.\s*GIÁM\s+ĐỐC|P\.\s*GIAM\s+DOC|P\.\s*TRƯỞNG\s+PHÒNG)"
     )
 
     name_blacklist_re = re.compile(

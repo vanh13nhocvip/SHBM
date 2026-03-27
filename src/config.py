@@ -2,40 +2,47 @@
 Cấu hình toàn cục cho SHBM
 """
 import os
+import sys
 
+def get_base_path():
+    """Lấy đường dẫn gốc của ứng dụng (hỗ trợ PyInstaller)"""
+    if getattr(sys, 'frozen', False):
+        # Khi chạy từ file .exe của PyInstaller
+        return sys._MEIPASS
+    # Khi chạy từ mã nguồn (thư mục chứa src/)
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-# Override with environment variables if set
-POPPLER_PATH = r"C:\Program Files (x86)\poppler-24.02.0\Library\bin"
+BASE_PATH = get_base_path()
 
-# Override with environment variable if set
-if 'POPPLER_PATH' in os.environ:
-    POPPLER_PATH = os.environ['POPPLER_PATH']
+# --- Poppler configuration ---
+# Ưu tiên bản local trong src/tools/deps/poppler
+local_poppler_bin = os.path.join(BASE_PATH, 'src', 'tools', 'deps', 'poppler', 'bin')
+local_poppler_lib = os.path.join(BASE_PATH, 'src', 'tools', 'deps', 'poppler', 'Library', 'bin')
+
+if os.path.exists(local_poppler_bin):
+    POPPLER_PATH = local_poppler_bin
+elif os.path.exists(local_poppler_lib):
+    POPPLER_PATH = local_poppler_lib
 else:
-    # Prefer a project-local copy if present (src/tools/deps/poppler)
-    # Calculate from src/ directory (2 levels up to project root, then down to src/tools/deps/poppler)
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    local_poppler_bin = os.path.join(project_root, 'src', 'tools', 'deps', 'poppler', 'bin')
-    local_poppler_lib = os.path.join(project_root, 'src', 'tools', 'deps', 'poppler', 'Library', 'bin')
-    if os.path.exists(local_poppler_bin):
-        POPPLER_PATH = local_poppler_bin
-    elif os.path.exists(local_poppler_lib):
-        POPPLER_PATH = local_poppler_lib
+    # Fallback to absolute system path (if any)
+    POPPLER_PATH = r"C:\Program Files (x86)\poppler-24.02.0\Library\bin"
 
 def has_poppler():
     """Return True if the configured POPPLER_PATH exists on disk."""
     return bool(POPPLER_PATH and os.path.exists(POPPLER_PATH))
-    
+
 def get_poppler_path():
     return POPPLER_PATH
 
 # --- OCR / Tesseract configuration ---
+local_tesseract = os.path.join(BASE_PATH, 'src', 'tools', 'deps', 'tesseract', 'tesseract.exe')
+if os.path.exists(local_tesseract):
+    TESSERACT_CMD = local_tesseract
+else:
+    TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-TESSERACT_CMD = os.environ.get('TESSERACT_CMD', r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe")
 OCR_LANG = os.environ.get('OCR_LANG', 'vie')
-# Options: 'tesseract', 'windows'
 OCR_ENGINE = os.environ.get('OCR_ENGINE', 'windows') 
-
-
 
 def read_params_file(path):
     """
