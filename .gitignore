@@ -1,36 +1,32 @@
-# Virtual environments
-venv/
-.venv/
-
-# Python caches
+# Python
 __pycache__/
-**/__pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+venv/
+.env
 
-# Distribution/build
-dist/
+# Build & Packaging
 build/
-*.egg-info/
-
-# PyInstaller
+dist/
 *.spec
+*.exe
 
-# IDE/editor
+# IDEs
 .vscode/
-*.swp
-*.swo
+.idea/
+*.code-workspace
 
-# Logs and temp
-logs/
+# Data & OS
+cache/
+*.log
+*.txt
+!requirements.txt
+!PROJECT_STRUCTURE.md
+!exclude_list.txt
+!exclude_tess.txt
+
+# SHBM Specific
+outputs/
+test_output/
+debug_output/
 temp/
-
-# OS files
-Thumbs.db
-.DS_Store
-
-# Excel outputs / generated
-*.xlsx
-
-# Node/npm
-node_modules/
-

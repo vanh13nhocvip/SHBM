@@ -1,9 +1,11 @@
 customtkinter
-PyPDF2
-pdfplumber
-pdf2image
-pytesseract
 pandas
 openpyxl
+pdf2image
+pytesseract
+PyPDF2
+pdfplumber
 Pillow
-pyinstaller
+winshell
+pywin32
+pyinstaller==6.4.0
